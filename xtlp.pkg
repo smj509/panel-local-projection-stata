@@ -1,0 +1,8 @@
+v 1.0.0
+d 'XTLP': Panel local projections with fixed-effect (FE) estimator and split-panel jackknife (SPJ) estimator
+d 
+d Distribution-Date:   20251210
+d License: MIT
+d 
+F xtlp.ado
+F xtlp.sthlp

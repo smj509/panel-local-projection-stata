@@ -1,2 +1,14 @@
-# panel-local-projection-stata
-STATA Code for split-panel jackknife in panel local projection
+_v. 1.0.0_  
+
+`xtlp` : Panel local projections with fixed-effect (FE) estimator and split-panel jackknife (SPJ) estimator
+===========================================================================================================
+
+
+### License
+MIT
+
+Author
+------
+
+**Shu SHEN**  
+shushen@link.cuhk.edu.hk  
