@@ -1,7 +1,7 @@
 # `xtlp` : Panel local projections
 
 This repository hosts the **Stata command** `xtlp` for panel local projections with split-panel jackknife (SPJ) estimator proposed by 
-- Ziwei Mei, Liugang Sheng, Zhentao Shi, 2025, "[Nickell bias in panel local projection: Financial crises are worse than you think,](https://arxiv.org/abs/2302.13455)" *Journal of International Economics*.
+- Ziwei Mei, Liugang Sheng, Zhentao Shi (2026), "[Nickell Bias in Panel Local Projection: Financial Crises Are Worse Than You Think](https://www.sciencedirect.com/science/article/abs/pii/S0022199625001679)",  *Journal of International Economics*, 104210.
 
 External repositories:
 - [panel-lp-replication](https://github.com/metricshilab/panel-lp-replication) is the repository that offers replication code for simulations and empirical applications in the paper.
