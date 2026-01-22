@@ -10,13 +10,10 @@ program define xtlp, eclass sortpreserve
     local idvar `r(panelvar)'
     local timevar `r(timevar)'
     
-    if "`idvar'" == "" {
-        di as error "Error: You must xtset your data before using xtspj."
+    if "`idvar'" == "" | "`timevar'" == "" {
+		di as error "Error: You must xtset your data with both panel and time variables (e.g., xtset id time)."
         exit 459
     }
-
-    marksample touse
-    markout `touse' `varlist'
 	
 	if "`method'" == "" {
         di as error "Error: option method() is required."
@@ -27,10 +24,14 @@ program define xtlp, eclass sortpreserve
     * -----------------------------------
     gettoken depvar indepvars : varlist
 	
-	_fv_check_depvar `depvar'
-	fvexpand `indepvars' if `touse'
+	marksample touse, novarlist
 	
-	local clean_names "`r(varlist)'"
+	_fv_check_depvar `depvar'
+	markout `touse' `idvar' `timevar'
+	fvexpand `indepvars' if `touse'
+	local indepvars_list "`r(varlist)'"
+	
+	markout `touse' `indepvars_list' `idvar' `timevar'
 	
 	* fe_type
 	* --------
@@ -183,7 +184,7 @@ program define xtlp, eclass sortpreserve
             di as error "Error: shock() must be an integer."
             exit 198
         }
-        local K : word count `clean_names'
+        local K : word count `indepvars_list'
         if (`nshock' < 1 | `nshock' > `K') {
             di as error "Error: shock() must be between 1 and `K' (number of covariates)."
             exit 198
@@ -199,7 +200,7 @@ program define xtlp, eclass sortpreserve
 		}
 		local shockvarlist ""
 		foreach j of local shocklist {
-			local thisvar : word `j' of `clean_names'
+			local thisvar : word `j' of `indepvars_list'
 			local shockvarlist `shockvarlist' `thisvar'
 		}
 		local Nshock : word count `shocklist'
@@ -229,18 +230,20 @@ program define xtlp, eclass sortpreserve
 	* -------------------------------------------------------
 	if `hor' == 0 {
 		
-		mata: lp_work("`depvar'", "`indepvars'", "`touse'", "`idvar'", "`timevar'", `fe_type', `method_code')
+		markout `touse' `depvar' `indepvars_list' `idvar' `timevar'
+		
+		mata: lp_work("`depvar'", "`indepvars_list'", "`touse'", "`idvar'", "`timevar'", `fe_type', `method_code')
 		
 		local N_val = scalar(N)
 		di _n as txt _col(53) as txt "Number of obs =" ///
 					 _col(67) as res %10.0fc `N_val'
 		
 // 		local depvar_trans_h "`trn`hstr''"
-// 		local clean_names : subinstr local clean_names "`depvar'" "`depvar_trans_h'", word all
+// 		local indepvars_list : subinstr local indepvars_list "`depvar'" "`depvar_trans_h'", word all
 		
-		matrix colnames b = `clean_names'
-		matrix colnames V = `clean_names'
-		matrix rownames V = `clean_names'
+		matrix colnames b = `indepvars_list'
+		matrix colnames V = `indepvars_list'
+		matrix rownames V = `indepvars_list'
 	
 		ereturn post b V, esample(`touse')
 	
@@ -281,13 +284,13 @@ program define xtlp, eclass sortpreserve
 			local depvar_transf ``y'`hstr''
 			tempvar touse_current
             qui gen byte `touse_current' = `touse'
-            qui markout `touse_current' `depvar_transf' `indepvars'
+            qui markout `touse_current' `depvar_transf' `indepvars_list' `idvar' `timevar'
             
-			mata: lp_work("`depvar_transf'", "`indepvars'", "`touse_current'", "`idvar'", "`timevar'", `fe_type', `method_code')
+			mata: lp_work("`depvar_transf'", "`indepvars_list'", "`touse_current'", "`idvar'", "`timevar'", `fe_type', `method_code')
 			
-			matrix colnames b = `clean_names'
-			matrix colnames V = `clean_names'
-			matrix rownames V = `clean_names'
+			matrix colnames b = `indepvars_list'
+			matrix colnames V = `indepvars_list'
+			matrix rownames V = `indepvars_list'
 			
 			matrix b`h' = b
 			matrix V`h' = V
@@ -379,13 +382,13 @@ program define xtlp, eclass sortpreserve
 			local depvar_transf ``y'`hstr''
 			tempvar touse_current
             qui gen byte `touse_current' = `touse'
-            qui markout `touse_current' `depvar_transf' `indepvars'
+            qui markout `touse_current' `depvar_transf' `indepvars_list' `idvar' `timevar'
             
-			mata: lp_work("`depvar_transf'", "`indepvars'", "`touse_current'", "`idvar'", "`timevar'", `fe_type', `method_code')
+			mata: lp_work("`depvar_transf'", "`indepvars_list'", "`touse_current'", "`idvar'", "`timevar'", `fe_type', `method_code')
 			
-			matrix colnames b = `clean_names'
-			matrix colnames V = `clean_names'
-			matrix rownames V = `clean_names'
+			matrix colnames b = `indepvars_list'
+			matrix colnames V = `indepvars_list'
+			matrix rownames V = `indepvars_list'
 			
 			matrix b`h' = b
 			matrix V`h' = V
@@ -414,7 +417,7 @@ program define xtlp, eclass sortpreserve
 		local first_matrix = 1
 		foreach idx of local shocklist {
 			local ++sidx
-			local shockvar : word `idx' of `clean_names'
+			local shockvar : word `idx' of `indepvars_list'
 			
 			tempname BIRF SEIRF SEIRF_LO SEIRF_UP IRF_s
 			
@@ -740,7 +743,7 @@ real matrix twoway_demean(real matrix Z, ///
     max_iter = (fe_type == 1 ? 1 : 1000) 
 
     if (fe_type != 1) {
-        tuniq = uniqrows(Time)
+        tuniq = uniqrows(sort(Time,1))
         Nt = rows(tuniq)
     }
 
