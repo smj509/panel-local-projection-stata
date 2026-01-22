@@ -706,7 +706,7 @@ void lp_work(string scalar depvar, ///
 	XX_inv = cholinv(cross(X_dot, X_dot))
 	V_est = XX_inv * W * XX_inv
 	real colvector se
-	se = sqrt(diagonal(V))
+	se = sqrt(diagonal(V_est))
 	
     // -------------------------------------------------------
     // Step 6: Post Results to Stata
@@ -727,50 +727,66 @@ real matrix twoway_demean(real matrix Z, ///
                           real scalar fe_type)
 {
     real scalar i, start, end_t
-    real matrix Z_dm
+    real matrix Z_dm, Z_prev
+
+	real scalar iter, max_iter, tol, diff
+    real colvector tuniq
+    real scalar Nt, j, tval
 
     Z_dm = Z
 
-    // -------- 1. individual FE (within-id) --------
-    for (i = 1; i <= rows(info); i++) {
-        start = info[i,1]
-        end_t = info[i,2]
+	tol = 1e-9
+    iter = 0
+    max_iter = (fe_type == 1 ? 1 : 1000) 
 
-        real matrix Zi
-        real rowvector mean_i
-
-        Zi     = Z[|start,1 \ end_t,.|]
-        mean_i = mean(Zi)
-        Z_dm[|start,1 \ end_t,.|] = Zi :- mean_i
+    if (fe_type != 1) {
+        tuniq = uniqrows(Time)
+        Nt = rows(tuniq)
     }
 
-    if (fe_type == 1) {
-		return(Z_dm)
-	}
-	else {
-		// -------- 2. time FE (within-time) on top of FE --------
-		real colvector tuniq
-		tuniq = uniqrows(Time)
-		real scalar Nt, j, tval
-		Nt = rows(tuniq)
-		
-		for (j = 1; j <= Nt; j++) {
-			tval = tuniq[j]
-		
-			real colvector idx_t
-			idx_t = selectindex(Time :== tval)
-			if (rows(idx_t) == 0) continue
-		
-			real matrix Zt
-			Zt = Z_dm[idx_t, .]
-			real rowvector mean_t
-			mean_t = mean(Zt)
-		
-			Z_dm[idx_t, .] = Zt :- mean_t
+    while (iter < max_iter) {
+
+        Z_prev = Z_dm 
+
+    // -------- 1. individual FE (within-id) --------
+    	for (i = 1; i <= rows(info); i++) {
+    	    start = info[i,1]
+    	    end_t = info[i,2]
+
+    	    real matrix Zi
+    	    real rowvector mean_i
+
+    	    Zi     = Z_dm[|start,1 \ end_t,.|]
+    	    mean_i = mean(Zi)
+    	    Z_dm[|start,1 \ end_t,.|] = Zi :- mean_i
+    	}
+
+    	// -------- 2. time FE (within-time) --------
+        if (fe_type != 1) {
+			for (j = 1; j <= Nt; j++) {
+				tval = tuniq[j]
+
+				real colvector idx_t
+				idx_t = selectindex(Time :== tval)
+				if (rows(idx_t) == 0) continue
+
+				real matrix Zt
+				Zt = Z_dm[idx_t, .]
+				real rowvector mean_t
+				mean_t = mean(Zt)
+
+				Z_dm[idx_t, .] = Zt :- mean_t
+			}
 		}
-		
-		return(Z_dm)
+
+		iter++
+        
+        if (fe_type == 1) break 
+        diff = max(abs(Z_dm - Z_prev))
+        if (diff < tol) break
 	}
+
+	return(Z_dm)
 }
 
 end
